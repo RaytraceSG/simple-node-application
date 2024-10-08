@@ -2,7 +2,7 @@ module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.7.0"
 
-  name = "azmi1-nodejs-ec2"
+  name = var.instance_name
 
   ami                         = data.aws_ami.aws_ami_data.id
   key_name                    = aws_key_pair.azmi1-tf-keypair.key_name
@@ -11,6 +11,9 @@ module "ec2_instance" {
   subnet_id                   = data.aws_subnet.public_subnet_data.id
   associate_public_ip_address = true
   user_data                   = file("init.sh")
+  tags = {
+    Name = var.instance_name
+  }
 }
 
 data "aws_subnet" "public_subnet_data" {
