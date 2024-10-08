@@ -16,6 +16,16 @@ jobs:
 
   Terraform-Checks:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        # We keep Terraform files in the terraform directory.
+        # working-directory: ./terraform
+
+    permissions:
+      pull-requests: write
+
     needs: Initial-Checks
 
     steps:
