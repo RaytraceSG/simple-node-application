@@ -5,10 +5,19 @@ on:
   push:
     branches:
       - main
+    paths:
+      - terraform/**
 
 jobs:
   Terraform-Create-And-Destroy:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        # We keep Terraform files in the terraform directory.
+        working-directory: ./terraform
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
