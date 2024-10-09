@@ -5,6 +5,8 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - terraform/**
 
 jobs:
   Initial-Checks:
@@ -21,7 +23,7 @@ jobs:
       run:
         shell: bash
         # We keep Terraform files in the terraform directory.
-        # working-directory: ./terraform
+        working-directory: ./terraform
 
     permissions:
       pull-requests: write
