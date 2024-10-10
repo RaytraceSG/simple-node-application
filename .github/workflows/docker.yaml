@@ -97,6 +97,7 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -no-color -auto-approve
+        working-directory: terraform
 
       - name: Export terraform outputs
         id: tfout
