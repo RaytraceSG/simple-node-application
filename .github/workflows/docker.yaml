@@ -111,14 +111,14 @@ jobs:
         id: ec2-instance
         run: |
           instance_id=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=azmi1-nodejs-ec2" --query "Reservations[].Instances[].InstanceId" --output text)
-          echo instance_id::$instance_id >> "$GITHUB_OUTPUT"
+          echo instance_id=$instance_id >> "$GITHUB_OUTPUT"
 
       - name: Get EC2 Public IP
         id: ec2-public-ip
         run: |
           ip_address=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
           # echo "Public IP: $ip_address"
-          echo ip_address::$ip_address >> "$GITHUB_OUTPUT"
+          echo ip_address=$ip_address >> "$GITHUB_OUTPUT"
 
       # - name: Pull Docker image from Public ECR
       #   run: |
