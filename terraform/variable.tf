@@ -15,3 +15,9 @@ variable "instance_name" {
   type        = string
   default     = "azmi1-nodejs-ec2"
 }
+
+variable "ecr_repo_name" {
+  description = "ECR Repo name"
+  type        = string
+  default     = "azmi1-nodejs-app"
+}
