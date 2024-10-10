@@ -1,5 +1,5 @@
-name: Terraform Apply & Destroy
-run-name: Running Terraform Apply & Destroy by ${{ github.actor }}
+name: Terraform Apply
+run-name: Running Terraform Apply by ${{ github.actor }}
 
 on:
   push:
@@ -43,8 +43,8 @@ jobs:
         run: |
           terraform output
 
-      - name: Wait for 15min
-        run: sleep 900
+      # - name: Wait for 15min
+      #   run: sleep 900
 
-      - name: Terraform Destroy
-        run: terraform destroy -no-color -auto-approve
+      # - name: Terraform Destroy
+      #   run: terraform destroy -no-color -auto-approve

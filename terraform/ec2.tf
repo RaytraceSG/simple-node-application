@@ -5,7 +5,7 @@ module "ec2_instance" {
   name = var.instance_name
 
   ami                         = data.aws_ami.aws_ami_data.id
-  key_name                    = var.key_name
+  key_name                    = aws_key_pair.azmi1-tf-keypair.key_name
   instance_type               = var.instance_type
   vpc_security_group_ids      = [data.aws_security_group.vpc_sg_data.id]
   subnet_id                   = data.aws_subnet.public_subnet_data.id
