@@ -62,7 +62,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
           ECR_REGISTRY_ALIAS: sctp-sandbox
-          ECR_REPOSITORY: azmi-nodejs-app
+          ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -72,6 +72,9 @@ jobs:
 
   Docker-Test:
     runs-on: ubuntu-latest
+    outputs:
+      instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
+      ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
     needs: Docker-Image-Create-And-Publish
     defaults:
       run:
@@ -108,26 +111,27 @@ jobs:
         id: ec2-instance
         run: |
           instance_id=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=azmi1-nodejs-ec2" --query "Reservations[].Instances[].InstanceId" --output text)
-          echo "::set-output name=instance_id::$instance_id"
+          echo instance_id::$instance_id >> "$GITHUB_OUTPUT"
 
       - name: Get EC2 Public IP
         id: ec2-public-ip
         run: |
           ip_address=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
           # echo "Public IP: $ip_address"
-          echo "::set-output name=ip_address::$ip_address"
+          echo ip_address::$ip_address >> "$GITHUB_OUTPUT"
 
-      - name: Pull Docker image from Public ECR
-        run: |
-          docker pull public.ecr.aws/your-public-repo:your-tag
+      # - name: Pull Docker image from Public ECR
+      #   run: |
+      #     docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Run Docker container on EC2
         env:
           ECR_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
           ECR_REGISTRY_ALIAS: sctp-sandbox
-          ECR_REPOSITORY: azmi-nodejs-app
+          ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
         run: |
           ssh -o StrictHostKeyChecking=no -i /tmp/azmi1-tf-private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} '
+          docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
           docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
           '
