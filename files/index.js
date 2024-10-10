@@ -28,5 +28,11 @@ app.get("/test", (req, res) => {
   res.send(msg);
 });
 
+app.get("/welcome", (req, res) => {
+  res.statusCode = 200;
+  const msg = "Hello from /welcome Azmi!";
+  res.send(msg);
+});
+
 app.listen(PORT, HOST);
 console.log(`Running on http://${HOST}:${PORT}`);
