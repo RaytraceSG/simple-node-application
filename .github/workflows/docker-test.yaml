@@ -7,32 +7,38 @@ on:
       - main
 
 jobs:
-  Get-Tag:
+  Get-Image:
     runs-on: ubuntu-latest
     outputs:
-      LATEST_TAG: ${{ steps.get_latest_tag.outputs.LATEST_TAG }}
+      LATEST_IMAGE: ${{ steps.get_latest_image.outputs.LATEST_IMAGE }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch All Tags
-        run: git fetch --tags
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.REGION }}
 
-      - name: Get Latest Tag
-        id: get_latest_tag
+      - name: Get Latest Image
+        env:
+          ECR_REPOSITORY: azmi1-nodejs-app
+        id: get_latest_image
         run: |
-          echo "LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)" >> "$GITHUB_OUTPUT"
-          echo "LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)"
+          LATEST_IMAGE=$(aws ecr-public describe-images --repository-name $ECR_REPOSITORY --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags' --output text)
+          echo LATEST_IMAGE=$LATEST_IMAGE >> "$GITHUB_OUTPUT"
 
-      - name: Output Latest Tag
-        run: echo "The latest tag is ${{ steps.get_latest_tag.outputs.LATEST_TAG }}"
+      - name: Output Latest Image
+        run: echo "The latest image is ${{ steps.get_latest_image.outputs.LATEST_IMAGE }}"
 
   Docker-Test:
     runs-on: ubuntu-latest
     outputs:
-      instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
-      ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
-    needs: Get-Tag
+      INSTANCE_ID: ${{ steps.ec2-instance.outputs.INSTANCE_ID }}
+      IP_ADDRESS: ${{ steps.ec2-public-ip.outputs.IP_ADDRESS }}
+    needs: Get-Image
     defaults:
       run:
         shell: bash
@@ -50,16 +56,18 @@ jobs:
 
       - name: Get EC2 Instance ID
         id: ec2-instance
+        env:
+          EC2_INSTANCE: azmi1-nodejs-ec2
         run: |
-          instance_id=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=azmi1-nodejs-ec2" --query "Reservations[].Instances[].InstanceId" --output text)
-          echo instance_id=$instance_id >> "$GITHUB_OUTPUT"
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=$EC2_INSTANCE" --query "Reservations[].Instances[].InstanceId" --output text)
+          echo INSTANCE_ID=$INSTANCE_ID >> "$GITHUB_OUTPUT"
 
       - name: Get EC2 Public IP
         id: ec2-public-ip
         run: |
-          ip_address=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
-          # echo "Public IP: $ip_address"
-          echo ip_address=$ip_address >> "$GITHUB_OUTPUT"
+          IP_ADDRESS=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.INSTANCE_ID }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
+          # echo "Public IP: $IP_ADDRESS"
+          echo IP_ADDRESS=$IP_ADDRESS >> "$GITHUB_OUTPUT"
 
       - name: Pull Private Key
         run: |
@@ -71,13 +79,13 @@ jobs:
           ECR_REGISTRY: public.ecr.aws
           ECR_REGISTRY_ALIAS: sctp-sandbox
           ECR_REPOSITORY: azmi1-nodejs-app
-          IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
+          IMAGE_TAG: ${{ needs.Get-Image.outputs.LATEST_IMAGE }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
+          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.IP_ADDRESS }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
 
       - name: Wait for 15sec
         run: sleep 15
 
       - name: Test Connectivity
         run: |
-          curl ${{ steps.ec2-public-ip.outputs.ip_address }}:8080
+          curl ${{ steps.ec2-public-ip.outputs.IP_ADDRESS }}:8080
