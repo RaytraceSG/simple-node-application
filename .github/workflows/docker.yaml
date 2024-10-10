@@ -78,8 +78,7 @@ jobs:
     outputs:
       instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
       ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
-    needs: Docker-Image-Create-And-Publish
-    needs: Get-Tag
+    needs: [Docker-Image-Create-And-Publish, Get-Tag]
     defaults:
       run:
         shell: bash
