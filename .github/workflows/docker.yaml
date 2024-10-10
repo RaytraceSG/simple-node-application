@@ -35,7 +35,7 @@ jobs:
   Docker-Image-Create-And-Publish:
     runs-on: ubuntu-latest
     outputs:
-      ecr_registry: ${{ steps.build-publish.outputs.ecr_registry }}
+      ECR_REGISTRY: ${{ steps.build-publish.outputs.ECR_REGISTRY }}
     needs: Get-Tag
     defaults:
       run:
@@ -71,7 +71,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
           echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
           echo "full_image=$ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
-          echo ecr_registry=$ecr_registry >> "$GITHUB_OUTPUT"
+          echo ECR_REGISTRY=$ECR_REGISTRY >> "$GITHUB_OUTPUT"
 
   Docker-Test:
     runs-on: ubuntu-latest
@@ -114,7 +114,7 @@ jobs:
 
       - name: Run Docker container on EC2
         env:
-          ECR_REGISTRY: ${{ needs.Docker-Image-Create-And-Publish.outputs.ecr_registry }}
+          ECR_REGISTRY: ${{ needs.Docker-Image-Create-And-Publish.outputs.ECR_REGISTRY }}
           ECR_REGISTRY_ALIAS: sctp-sandbox
           ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
