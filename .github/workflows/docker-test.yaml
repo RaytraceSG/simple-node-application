@@ -1,5 +1,5 @@
 name: Docker run and test
-run-name: Running Docker test and publish by ${{ github.actor }}
+run-name: Running Docker run and test by ${{ github.actor }}
 
 on:
   workflow_dispatch:
@@ -7,12 +7,32 @@ on:
       - main
 
 jobs:
+  Get-Tag:
+    runs-on: ubuntu-latest
+    outputs:
+      LATEST_TAG: ${{ steps.get_latest_tag.outputs.LATEST_TAG }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch All Tags
+        run: git fetch --tags
+
+      - name: Get Latest Tag
+        id: get_latest_tag
+        run: |
+          echo "LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)" >> "$GITHUB_OUTPUT"
+          echo "LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)"
+
+      - name: Output Latest Tag
+        run: echo "The latest tag is ${{ steps.get_latest_tag.outputs.LATEST_TAG }}"
+
   Docker-Test:
     runs-on: ubuntu-latest
     outputs:
       instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
       ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
-    needs: Docker-Image-Create-And-Publish
+    needs: Get-Tag
     defaults:
       run:
         shell: bash
@@ -53,7 +73,11 @@ jobs:
           ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} '
-          docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
-          docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
-          '
+          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Wait for 15sec
+        run: sleep 15
+
+      - name: Test Connectivity
+        run: |
+          curl ${{ steps.ec2-public-ip.outputs.ip_address }}:8080
