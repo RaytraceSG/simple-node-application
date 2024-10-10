@@ -38,7 +38,6 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: files
 
     steps:
       - name: Checkout
@@ -79,7 +78,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: files
+        working-directory: ./terraform
 
     steps:
       - name: Checkout
@@ -120,9 +119,10 @@ jobs:
           # echo "Public IP: $ip_address"
           echo ip_address=$ip_address >> "$GITHUB_OUTPUT"
 
-      # - name: Pull Docker image from Public ECR
-      #   run: |
-      #     docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Pull Private Key
+        run: |
+          echo "${{ secrets.PRIVATE_KEY }}" > private-key.pem
+          chmod 400 private-key.pem
 
       - name: Run Docker container on EC2
         env:
@@ -131,7 +131,7 @@ jobs:
           ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i /tmp/azmi1-tf-private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} '
+          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} '
           docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
           docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
           '
