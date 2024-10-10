@@ -9,7 +9,7 @@ on:
       - terraform/**
 
 jobs:
-  Terraform-Create-And-Destroy:
+  Terraform-Create:
     runs-on: ubuntu-latest
 
     defaults:
