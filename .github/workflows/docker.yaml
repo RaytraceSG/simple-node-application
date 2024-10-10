@@ -79,6 +79,7 @@ jobs:
       run:
         shell: bash
 
+    steps:
       - name: Get EC2 Instance ID
         id: ec2-instance
         run: |
