@@ -5,11 +5,11 @@ on:
   workflow_dispatch:
     branches:
       - main
-  push:
-    branches:
-      - main
-    paths:
-      - files/**
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - files/**
 
 jobs:
   Get-Tag:
@@ -73,57 +73,57 @@ jobs:
           echo "full_image=$ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
           echo ECR_REGISTRY=$ECR_REGISTRY >> "$GITHUB_OUTPUT"
 
-  Docker-Test:
-    runs-on: ubuntu-latest
-    outputs:
-      instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
-      ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
-    needs: [Docker-Image-Create-And-Publish, Get-Tag]
-    defaults:
-      run:
-        shell: bash
+  # Docker-Test:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     instance_id: ${{ steps.ec2-instance.outputs.instance_id }}
+  #     ip_address: ${{ steps.ec2-public-ip.outputs.ip_address }}
+  #   needs: [Docker-Image-Create-And-Publish, Get-Tag]
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.REGION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ vars.REGION }}
 
-      - name: Get EC2 Instance ID
-        id: ec2-instance
-        run: |
-          instance_id=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=azmi1-nodejs-ec2" --query "Reservations[].Instances[].InstanceId" --output text)
-          echo instance_id=$instance_id >> "$GITHUB_OUTPUT"
+  #     - name: Get EC2 Instance ID
+  #       id: ec2-instance
+  #       run: |
+  #         instance_id=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=azmi1-nodejs-ec2" --query "Reservations[].Instances[].InstanceId" --output text)
+  #         echo instance_id=$instance_id >> "$GITHUB_OUTPUT"
 
-      - name: Get EC2 Public IP
-        id: ec2-public-ip
-        run: |
-          ip_address=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
-          # echo "Public IP: $ip_address"
-          echo ip_address=$ip_address >> "$GITHUB_OUTPUT"
+  #     - name: Get EC2 Public IP
+  #       id: ec2-public-ip
+  #       run: |
+  #         ip_address=$(aws ec2 describe-instances --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} --query "Reservations[].Instances[].PublicIpAddress" --output text)
+  #         # echo "Public IP: $ip_address"
+  #         echo ip_address=$ip_address >> "$GITHUB_OUTPUT"
 
-      - name: Pull Private Key
-        run: |
-          echo "${{ secrets.PRIVATE_KEY }}" > private-key.pem
-          chmod 400 private-key.pem
+  #     - name: Pull Private Key
+  #       run: |
+  #         echo "${{ secrets.PRIVATE_KEY }}" > private-key.pem
+  #         chmod 400 private-key.pem
 
-      - name: Run Docker container on EC2
-        env:
-          ECR_REGISTRY: ${{ needs.Docker-Image-Create-And-Publish.outputs.ECR_REGISTRY }}
-          ECR_REGISTRY_ALIAS: sctp-sandbox
-          ECR_REPOSITORY: azmi1-nodejs-app
-          IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
-        run: |
-          ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
+  #     - name: Run Docker container on EC2
+  #       env:
+  #         ECR_REGISTRY: ${{ needs.Docker-Image-Create-And-Publish.outputs.ECR_REGISTRY }}
+  #         ECR_REGISTRY_ALIAS: sctp-sandbox
+  #         ECR_REPOSITORY: azmi1-nodejs-app
+  #         IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
+  #       run: |
+  #         ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      - name: Wait for 15sec
-        run: sleep 15
+  #     - name: Wait for 15sec
+  #       run: sleep 15
 
-      - name: Test Connectivity
-        run: |
-          curl ${{ steps.ec2-public-ip.outputs.ip_address }}:8080
+  #     - name: Test Connectivity
+  #       run: |
+  #         curl ${{ steps.ec2-public-ip.outputs.ip_address }}:8080
