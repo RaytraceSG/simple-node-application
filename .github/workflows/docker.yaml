@@ -121,6 +121,9 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i private-key.pem ec2-user@${{ steps.ec2-public-ip.outputs.ip_address }} "sudo docker pull $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG && sudo docker run -dp 8080:8080 $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG"
 
+      - name: Wait for 15sec
+        run: sleep 15
+
       - name: Test Connectivity
         run: |
           curl ${{ steps.ec2-public-ip.outputs.ip_address }}:8080
