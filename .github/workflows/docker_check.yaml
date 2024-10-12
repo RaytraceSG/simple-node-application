@@ -1,0 +1,86 @@
+name: Docker Checks
+run-name: Running Docker Checks by ${{ github.actor }}
+
+env:
+  ECR_REPOSITORY: azmi1-nodejs-app
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - files/**
+
+jobs:
+  Initial-Checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Getting initiator name
+        run: echo "Workflow initiated by ${{ github.actor }} from branch ${{ github.ref_name }}"
+
+  Docker-Checks:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        # We keep Terraform files in the terraform directory.
+        working-directory: ./files
+
+    permissions:
+      pull-requests: write
+
+    needs: Initial-Checks
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        id: docker-build
+        run: docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
+
+      - name: Run Trivy vulnerability scanner
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@0.27.0
+        with:
+          scan-type: "image"
+          scan-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          format: table
+          trivy-config: trivy.yaml
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          output: "docker-image-scan.json"
+
+      - name: Upload Docker Trivy Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-scan
+          path: docker-image-scan.json
+
+      - name: Update Pull Request
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          SCAN: ${{ steps.trivy-scan.outputs.stdout }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
+            #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
+
+            <details><summary>Show Trivy Output</summary>
+
+            \`\`\`${process.env.SCAN}\`\`\`
+
+            </details>
+
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
