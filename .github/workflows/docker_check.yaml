@@ -21,7 +21,6 @@ jobs:
 
   Docker-Checks:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         shell: bash
@@ -48,31 +47,36 @@ jobs:
           scan-type: "image"
           scan-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
           format: table
-          trivy-config: trivy.yaml
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
-          output: "docker-image-scan.json"
+          output: "trivy-results.txt"
 
       - name: Upload Docker Trivy Report
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image-scan
-          path: docker-image-scan.json
+          name: trivy-results
+          path: trivy-results.txt
+
+      - name: Read Trivy scan results
+        id: read_trivy_results
+        run: |
+          SCAN_RESULTS=$(cat trivy-results.txt)
+          echo "results<<EOF" >> $GITHUB_OUTPUT
+          echo "$SCAN_RESULTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Update Pull Request
         if: always()
         uses: actions/github-script@v7
-        env:
-          SCAN: ${{ steps.trivy-scan.outputs.stdout }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
             #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
 
-            <details><summary>Show Trivy Output</summary>
+            <details><summary>Show Trivy Scan Results</summary>
 
-            \`\`\`${process.env.SCAN}\`\`\`
+            \`\`\`${{ steps.read_trivy_results.outputs.results }}\`\`\`
 
             </details>
 

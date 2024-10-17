@@ -1,6 +1,10 @@
 name: Docker image build and publish
 run-name: Running Docker image build and publish by ${{ github.actor }}
 
+env:
+  ECR_REGISTRY_ALIAS: sctp-sandbox
+  ECR_REPOSITORY: azmi1-nodejs-ap
+
 on:
   push:
     branches:
@@ -60,8 +64,6 @@ jobs:
         id: build-publish
         env:
           ECR_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
-          ECR_REGISTRY_ALIAS: sctp-sandbox
-          ECR_REPOSITORY: azmi1-nodejs-app
           IMAGE_TAG: ${{ needs.Get-Tag.outputs.LATEST_TAG }}.${{ github.run_number }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG .
