@@ -51,6 +51,15 @@ jobs:
           severity: "CRITICAL,HIGH,LOW,MEDIUM"
           output: "trivy-report.json"
 
+      - name: Read Trivy Report
+        id: read_trivy
+        run: |
+          if [ ! -f trivy-report.json ]; then
+            echo "Trivy report not found!"
+            exit 1
+          fi
+          echo "Trivy report found!"
+          cat trivy-report.json
       # - name: Upload Docker Trivy Report
       #   uses: actions/upload-artifact@v4
       #   with:
@@ -86,7 +95,7 @@ jobs:
             const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
             #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
 
-            <details><summary>Show Trivy Scan Results</summary>
+            <details><summary>Show Trivy Scan Report</summary>
 
             \`\`\`${vulnerabilities}\`\`\`
 
