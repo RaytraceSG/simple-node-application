@@ -49,13 +49,13 @@ jobs:
           format: json
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH,LOW,MEDIUM"
-          output: "trivy-results.json"
+          output: "trivy-report.json"
 
-      - name: Upload Docker Trivy Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-results
-          path: trivy-results.json
+      # - name: Upload Docker Trivy Report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trivy-report
+      #     path: trivy-report.json
 
       # - name: Read Trivy scan results
       #   id: read_trivy_results
@@ -72,7 +72,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const report = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
+            const report = JSON.parse(fs.readFileSync('trivy-report.json', 'utf8'));
             let vulnerabilities = '';
 
             if (report.Results && report.Results.length > 0) {
