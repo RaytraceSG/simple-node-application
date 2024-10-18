@@ -57,13 +57,13 @@ jobs:
           name: trivy-results
           path: trivy-results.json
 
-      - name: Read Trivy scan results
-        id: read_trivy_results
-        run: |
-          SCAN_RESULTS=$(cat trivy-results.json)
-          echo "results<<EOF" >> $GITHUB_OUTPUT
-          echo "$SCAN_RESULTS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+      # - name: Read Trivy scan results
+      #   id: read_trivy_results
+      #   run: |
+      #     SCAN_RESULTS=$(cat trivy-results.json)
+      #     echo "results<<EOF" >> $GITHUB_OUTPUT
+      #     echo "$SCAN_RESULTS" >> $GITHUB_OUTPUT
+      #     echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Update Pull Request
         if: always()
@@ -71,12 +71,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
+            const vulnerabilities = report.Results.map(result => {
+              return `### ${result.Target}\n\n${result.Vulnerabilities.map(vul => `- **${vul.Severity}**: ${vul.Title}`).join('\n')}`;
+            }).join('\n\n');
             const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
             #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
 
             <details><summary>Show Trivy Scan Results</summary>
 
-            \`\`\`${{ steps.read_trivy_results.outputs.results }}\`\`\`
+            \`\`\`${vulnerabilities}\`\`\`
 
             </details>
 
