@@ -46,21 +46,21 @@ jobs:
         with:
           scan-type: "image"
           scan-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
-          format: table
+          format: json
           vuln-type: "os,library"
           severity: "CRITICAL,HIGH"
-          output: "trivy-results.txt"
+          output: "trivy-results.json"
 
       - name: Upload Docker Trivy Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-results
-          path: trivy-results.txt
+          path: trivy-results.json
 
       - name: Read Trivy scan results
         id: read_trivy_results
         run: |
-          SCAN_RESULTS=$(cat trivy-results.txt)
+          SCAN_RESULTS=$(cat trivy-results.json)
           echo "results<<EOF" >> $GITHUB_OUTPUT
           echo "$SCAN_RESULTS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
