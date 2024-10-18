@@ -48,7 +48,7 @@ jobs:
           scan-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
           format: json
           vuln-type: "os,library"
-          severity: "CRITICAL,HIGH"
+          severity: "CRITICAL,HIGH,LOW,MEDIUM"
           output: "trivy-results.json"
 
       - name: Upload Docker Trivy Report
@@ -73,9 +73,16 @@ jobs:
           script: |
             const fs = require('fs');
             const report = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
-            const vulnerabilities = report.Results.map(result => {
-              return `### ${result.Target}\n\n${result.Vulnerabilities.map(vul => `- **${vul.Severity}**: ${vul.Title}`).join('\n')}`;
-            }).join('\n\n');
+            let vulnerabilities = '';
+
+            if (report.Results && report.Results.length > 0) {
+              vulnerabilities = report.Results.map(result => {
+                return `### ${result.Target}\n\n${result.Vulnerabilities.map(vul => `- **${vul.Severity}**: ${vul.Title}`).join('\n')}`;
+              }).join('\n\n');
+            } else {
+              vulnerabilities = 'No vulnerabilities found.';
+            }
+
             const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
             #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
 
