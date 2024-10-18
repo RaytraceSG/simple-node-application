@@ -42,13 +42,10 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@0.27.0
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          scan-type: "image"
           image-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
           format: "json"
-          vuln-type: "os,library"
-          severity: "CRITICAL,HIGH,LOW,MEDIUM"
           output: "trivy-report.json"
 
       - name: Read Trivy Report
