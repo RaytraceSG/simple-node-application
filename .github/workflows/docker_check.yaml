@@ -21,7 +21,6 @@ jobs:
 
   Docker-Checks:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         shell: bash
@@ -43,36 +42,60 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@0.27.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          scan-type: "image"
-          scan-ref: "${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
-          format: table
-          trivy-config: trivy.yaml
-          vuln-type: "os,library"
-          severity: "CRITICAL,HIGH"
-          output: "docker-image-scan.json"
+          image-ref: "/files/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          format: "json"
+          output: "trivy-report.json"
+
+      - name: Read Trivy Report
+        id: read_trivy
+        run: |
+          if [ ! -f trivy-report.json ]; then
+            echo "Trivy report not found!"
+            exit 1
+          fi
+          echo "Trivy report found!"
+          cat trivy-report.json
 
       - name: Upload Docker Trivy Report
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image-scan
-          path: docker-image-scan.json
+          name: trivy-report
+          path: trivy-report.json
+
+      # - name: Read Trivy scan results
+      #   id: read_trivy_report
+      #   run: |
+      #     SCAN_REPORT=$(cat trivy-report.json)
+      #     echo "reports<<EOF" >> $GITHUB_OUTPUT
+      #     echo "$SCAN_REPORT" >> $GITHUB_OUTPUT
+      #     echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Update Pull Request
         if: always()
         uses: actions/github-script@v7
-        env:
-          SCAN: ${{ steps.trivy-scan.outputs.stdout }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('trivy-report.json', 'utf8'));
+            let vulnerabilities = '';
+
+            if (report.Results && report.Results.length > 0) {
+              vulnerabilities = report.Results.map(result => {
+                return `### ${result.Target}\n\n${result.Vulnerabilities.map(vul => `- **${vul.Severity}**: ${vul.Title}`).join('\n')}`;
+              }).join('\n\n');
+            } else {
+              vulnerabilities = 'No vulnerabilities found.';
+            }
+
             const output = `#### Docker Build 🏗️\`${{ steps.docker-build.outcome }}\`
             #### Trivy Scan ⚙️\`${{ steps.trivy-scan.outcome }}\`
 
-            <details><summary>Show Trivy Output</summary>
+            <details><summary>Show Trivy Scan Report</summary>
 
-            \`\`\`${process.env.SCAN}\`\`\`
+            \`\`\`${vulnerabilities}\`\`\`
 
             </details>
 
